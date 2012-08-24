@@ -4,6 +4,7 @@
 
 # External requirements: jhead
 
+use feature 'say';
 use Linux::Inotify2;
 use Getopt::Long;
 
@@ -29,15 +30,15 @@ sub watchit {
     my $fullname = $e->fullname;
     my $name = $e->name;
     # if a dir was created, start watching it
-    if ($e->IN_CREATE and -d $fullname) {
-        $inotify->watch (DUMP_DIR, IN_MOVED_TO|IN_CLOSE_WRITE|IN_CREATE|IN_DELETE_SELF|IN_ONLYDIR, \&watchit);
-        print "Now watching $fullname\n" if $debug;
+    if ( ($e->IN_CREATE or $e->IN_MOVED_TO) and -d $fullname) {
+        $inotify->watch ($fullname, IN_MOVED_TO|IN_CLOSE_WRITE|IN_CREATE|IN_DELETE_SELF|IN_ONLYDIR, \&watchit);
+        say "Now watching $fullname" if $debug;
     } elsif ($e->IN_DELETE_SELF) {
-        print "No longer watching $fullname\n" if $debug;
+        say "No longer watching $fullname" if $debug;
         $e->w->cancel;
     } else {
         my @list = ();
-        print "$fullname ($name) was written.\n" if $debug;
+        say "$fullname ($name) was written" if $debug;
         if ( $name =~ /\.jpg$/i ) {
             sleep 1;
             open JHEAD, "jhead $fullname|" or die "Could not jhead $fullname\n";
@@ -51,14 +52,14 @@ sub watchit {
                     my $sec   = $6;
                     my $dest  = DEST_DIR. "${year}_${month}_${day}";
                     if (-r "$dest/${year}_${month}_${day}-${hour}_${min}_${sec}.jpg") {
-                        print "Skipping duplicate $dest/${year}_${month}_${day}-${hour}_${min}_${sec}.jpg\n" 
+                        say "Skipping duplicate $dest/${year}_${month}_${day}-${hour}_${min}_${sec}.jpg" 
                             if $debug;
                         unlink $fullname;
                         last;
                     }
                     if (-r "$dest/${year}_${month}_${day}-${hour}-${min}_${sec}.jpg") {
 
-                        print "Skipping duplicate $dest/${year}_${month}_${day}-${hour}-${min}_${sec}.jpg\n"
+                        say "Skipping duplicate $dest/${year}_${month}_${day}-${hour}-${min}_${sec}.jpg"
                             if $debug;
                         unlink $fullname;
                         last;
