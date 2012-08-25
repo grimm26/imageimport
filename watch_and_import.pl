@@ -6,6 +6,7 @@
 
 use feature 'say';
 use Linux::Inotify2;
+use File::Find;
 use Getopt::Long;
 use Sys::Syslog qw(:standard :macros);
 
@@ -27,8 +28,8 @@ use constant DEST_DIR => '/raid/media/pictures/';
 my $inotify = new Linux::Inotify2
     or (syslog(LOG_ERR,'unable to create new inotify object: %m') and die "unable to create new inotify object: $!\n");
  
-# watch for when a write filehandle is closed.
-$inotify->watch (DUMP_DIR, IN_MOVED_TO|IN_CLOSE_WRITE|IN_CREATE|IN_DELETE_SELF|IN_ONLYDIR, \&watchit);
+find({ wanted => \&watch_dirs, no_chdir => 1 }, DUMP_DIR);
+
 # keep polling :)
 1 while $inotify->poll;
 
@@ -97,4 +98,8 @@ sub dolog {
     }
 }
 
-
+sub watch_dirs {
+    # watch for when a write filehandle is closed.
+    $inotify->watch ($File::Find::dir, IN_MOVED_TO|IN_CLOSE_WRITE|IN_CREATE|IN_DELETE_SELF|IN_ONLYDIR, \&watchit);
+    &dolog(LOG_DEBUG, "Now watching $File::Find::dir");
+}
