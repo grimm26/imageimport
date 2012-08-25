@@ -7,23 +7,30 @@
 use feature 'say';
 use Linux::Inotify2;
 use Getopt::Long;
+use Sys::Syslog qw(:standard :macros);
 
 use warnings;
 use strict;
 
-my $debug = 0;
-GetOptions ("debug" => \$debug );
+our $debug = 0;
+our $syslog = 0;
+GetOptions ("debug" => \$debug, "syslog" => \$syslog );
+if ($syslog) {
+    openlog($0,'pid',LOG_DAEMON);
+}
 
 # Where images will be dumped.
 use constant DUMP_DIR => '/raid/media/pictures/dumpdir/';
 use constant DEST_DIR => '/raid/media/pictures/';
 
-# create a new object
+# create a new inotify object
 my $inotify = new Linux::Inotify2
-    or die "unable to create new inotify object: $!";
+    or (syslog(LOG_ERR,'unable to create new inotify object: %m') and die "unable to create new inotify object: $!\n");
  
 # watch for when a write filehandle is closed.
 $inotify->watch (DUMP_DIR, IN_MOVED_TO|IN_CLOSE_WRITE|IN_CREATE|IN_DELETE_SELF|IN_ONLYDIR, \&watchit);
+# keep polling :)
+1 while $inotify->poll;
 
 sub watchit {
     my $e = shift;
@@ -32,16 +39,17 @@ sub watchit {
     # if a dir was created, start watching it
     if ( ($e->IN_CREATE or $e->IN_MOVED_TO) and -d $fullname) {
         $inotify->watch ($fullname, IN_MOVED_TO|IN_CLOSE_WRITE|IN_CREATE|IN_DELETE_SELF|IN_ONLYDIR, \&watchit);
-        say "Now watching $fullname" if $debug;
+        &dolog(LOG_DEBUG, "Now watching $fullname");
     } elsif ($e->IN_DELETE_SELF) {
-        say "No longer watching $fullname" if $debug;
+        &dolog(LOG_DEBUG, "No longer watching $fullname");
         $e->w->cancel;
     } else {
         my @list = ();
-        say "$fullname ($name) was written" if $debug;
+        &dolog(LOG_DEBUG,"$fullname ($name) was written");
         if ( $name =~ /\.jpg$/i ) {
             sleep 1;
-            open JHEAD, "jhead $fullname|" or die "Could not jhead $fullname\n";
+            open JHEAD, "jhead $fullname|" or 
+                (&dolog(LOG_ERR, "Could not jhead $fullname. Skipping.") and return);
             while (<JHEAD>) {
                 if (m!^Date/Time\s+:\s+(\d+):(\d+):(\d+)\s+(\d+):(\d+):(\d+)!) {
                     my $year  = $1;
@@ -52,22 +60,21 @@ sub watchit {
                     my $sec   = $6;
                     my $dest  = DEST_DIR. "${year}_${month}_${day}";
                     if (-r "$dest/${year}_${month}_${day}-${hour}_${min}_${sec}.jpg") {
-                        say "Skipping duplicate $dest/${year}_${month}_${day}-${hour}_${min}_${sec}.jpg" 
-                            if $debug;
+                        &dolog(LOG_NOTICE, "Skipping duplicate $dest/${year}_${month}_${day}-${hour}_${min}_${sec}.jpg"); 
                         unlink $fullname;
                         last;
                     }
                     if (-r "$dest/${year}_${month}_${day}-${hour}-${min}_${sec}.jpg") {
 
-                        say "Skipping duplicate $dest/${year}_${month}_${day}-${hour}-${min}_${sec}.jpg"
-                            if $debug;
+                        &dolog(LOG_NOTICE, "Skipping duplicate $dest/${year}_${month}_${day}-${hour}-${min}_${sec}.jpg");
                         unlink $fullname;
                         last;
                     }
                     push @list, $dest;
                     system "mkdir $dest" unless -d "$dest";
-                    rename($fullname, "$dest/$name") or warn "Could not move $name: $!\n";
-                    system "jhead  -n%Y_%m_%d-%H_%M_%S $dest/$name";
+                    rename($fullname, "$dest/$name") or (&dolog(LOG_ERR, "Could not move $name: $!"));
+                    my $rename = `jhead  -n%Y_%m_%d-%H_%M_%S $dest/$name`;
+                    &dolog(LOG_NOTICE, $rename);
                     last;
                 }
             }
@@ -79,6 +86,15 @@ sub watchit {
     }
 }
 
-# keep polling :)
-1 while $inotify->poll;
+sub dolog {
+    my $priority = shift;
+    my $mesg = shift;
+    if ($syslog) {
+        syslog($priority,$mesg);
+    }
+    if ($debug) {
+        say $mesg;
+    }
+}
+
 
