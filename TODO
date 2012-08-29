@@ -1,3 +1,2 @@
-- Recursively watch for new directories in the dump dir
+python version
 - Have option to use syslog for messages
-- Scan the dump dir at the start for directories to watch
