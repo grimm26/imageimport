@@ -3,16 +3,24 @@
 import re
 import os
 from subprocess import check_output
+import subprocess
 import pyinotify
 
 DUMP_DIR = '/raid/media/pictures/dumpdir/'
 DEST_DIR = '/raid/media/pictures/'
 
 def import_image(filename):
+    """Move the image file from the DUMP_DIR to the DEST_DIR"""
+
+    # We end up back here when we remove a duplicate so let's just bail out
+    # right away if the file isn't here.
+    if not os.path.exists(filename):
+        return False
     try:
         jhead_out = str(check_output(["jhead", filename]),'utf8')
     except subprocess.CalledProcessError as err:
         print("ERROR:",err,err.returncode,err.output)
+        return False
 
     m = re.search(r"^Date/Time\s+:\s+(?P<year>\d+):(?P<month>\d+):(?P<day>\d+)\s+(?P<hour>\d+):(?P<min>\d+):(?P<sec>\d+)",
             jhead_out,re.MULTILINE)
