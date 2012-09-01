@@ -1,3 +1,4 @@
 python version
 - Have option to use syslog for messages
 - Take command line options to specify directories and debug mode
+- remove jhead dependency
