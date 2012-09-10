@@ -7,6 +7,7 @@ import subprocess
 import pyinotify
 import argparse
 import logging
+import magic
 
 # Parse command line args
 parser = argparse.ArgumentParser(description='process image import directory')
@@ -35,6 +36,13 @@ def import_image(filename):
     # right away if the file isn't here.
     if not os.path.exists(filename):
         return False
+
+    ms = magic.open(magic.NONE)
+    ms.load()
+    tp = ms.file(filename)
+    if not (re.search(r"^JPEG image data",tp)):
+        return False
+
     try:
         jhead_out = str(check_output(["jhead", filename]),'utf8')
     except subprocess.CalledProcessError as err:
@@ -58,6 +66,7 @@ def import_image(filename):
         logging.debug("Skipping duplicate %s", dest_file)
         try:
             os.remove(filename)
+            logging.debug("Removed duplicate %s", filename)
         except OSError:
             logging.warning("Could not remove %s",filename)
     else:
@@ -79,11 +88,11 @@ mask = pyinotify.IN_CLOSE_WRITE | pyinotify.IN_MOVED_TO  # watched events
 class EventHandler(pyinotify.ProcessEvent):
     def process_IN_CLOSE_WRITE(self, event):
         logging.debug("File written: %s", event.pathname)
-        if re.search(r"\.jpg$", event.name, re.I):
+        if re.search(r"^(?!\.).+\.jpg$", event.name, re.I):
             import_image(event.pathname)
     def process_IN_MOVED_TO(self, event):
         logging.debug("File moved to: %s", event.pathname)
-        if re.search(r"\.jpg$", event.name, re.I):
+        if re.search(r"^(?!\.).+\.jpg$", event.name, re.I):
             import_image(event.pathname)
 
 handler = EventHandler()

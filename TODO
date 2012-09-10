@@ -1,3 +1,4 @@
 - Have option to use syslog for messages
 - add daemonize option
 - remove jhead dependency
+- queue files up for processing to allow settling of files from CIFS clients like Macs
