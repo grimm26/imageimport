@@ -2,6 +2,7 @@
 
 import re
 import os
+import stat
 from subprocess import check_output
 import subprocess
 import pyinotify
@@ -74,6 +75,11 @@ def import_image(filename):
             if not os.path.isdir(dest_dir):
                 os.mkdir(dest_dir,0o775)
             os.rename(filename,dest_file)
+            existing_permissions = stat.S_IMODE(os.stat(dest_file).st_mode)
+            # Set permissions
+            os.chmod(dest_file, stat.S_IREAD | stat.S_IWRITE | stat.S_IRGRP |stat.S_IWGRP |stat.S_IROTH)
+            # Make sure media group owns file.  This should be a CLI option.
+            os.chown(dest_file,-1,444)
             logging.info("%s --> %s",filename,dest_file)
             return True
         except OSError as err:
