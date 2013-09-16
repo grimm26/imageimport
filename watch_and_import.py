@@ -52,6 +52,10 @@ def import_image(filename):
 
     m = re.search(r"^Date/Time\s+:\s+(?P<year>\d+):(?P<month>\d+):(?P<day>\d+)\s+(?P<hour>\d+):(?P<min>\d+):(?P<sec>\d+)",
             jhead_out,re.MULTILINE)
+    if not m:
+        m = re.search(r"^File date\s+:\s+(?P<year>\d+):(?P<month>\d+):(?P<day>\d+)\s+(?P<hour>\d+):(?P<min>\d+):(?P<sec>\d+)",
+            jhead_out,re.MULTILINE)
+
     ts = m.groupdict()
     if "year" not in ts:
         logging.info("No date info in image %s",filename)
