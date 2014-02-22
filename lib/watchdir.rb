@@ -6,7 +6,6 @@ class ImageWatch
   include EXIFR
 
   def initialize(dir)
-    @fm = FileMagic.new
     @notifier = INotify::Notifier.new
     raise "Error accessing #{dir}" unless File.directory?(dir)
     @notifier.watch(dir, :moved_to, :close_write) { |event| processInotifyEvent(event) }
@@ -16,8 +15,7 @@ class ImageWatch
   private
   def processInotifyEvent(event)
     filepath = event.absolute_name
-    filetype = @fm.file(filepath)
-    if filetype =~ /^JPEG/
+    if FileMagic.open(:mime_type) { |fm| fm.file(filepath) } == 'image/jpeg'
       dt = JPEG.new(filepath).date_time
       puts "Found jpeg: #{filepath}, #{dt}"
     end
