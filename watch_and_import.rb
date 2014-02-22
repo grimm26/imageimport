@@ -2,4 +2,4 @@
 #
 require_relative 'lib/watchdir'
 
-ImageWatch.new("/tmp/mk")
+ImageWatch.new("/tmp/mk","/tmp/mk2")
