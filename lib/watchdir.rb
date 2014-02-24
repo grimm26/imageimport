@@ -6,7 +6,7 @@ require 'date'
 class ImageWatch
   include EXIFR
 
-  def initialize(watch,destination)
+  def initialize(watch: nil,destination: nil)
     raise "Error accessing watchdir <<#{watch}>>" unless File.directory?(watch)
     raise "Error accessing destination <<#{destination}>>" unless File.directory?(destination)
     File.umask(0002)
