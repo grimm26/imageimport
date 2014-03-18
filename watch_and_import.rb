@@ -25,7 +25,7 @@ begin
       options[:destination] = dir
     end
 
-    options[:loglevel] = loglevels['WARN']
+    options[:loglevel] = loglevels['INFO']
     opts.on("--loglevel LEVEL", loglevels,  "Logging level (DEBUG, INFO, WARN, ERROR, FATAL, UNKNOWN).") do |level|
       options[:loglevel] = level
     end
@@ -41,4 +41,13 @@ rescue Exception => e
   STDERR.puts e.backtrace.inspect
 end
 
-ImageWatch.new(watch: options[:watchdir], destination: options[:destination])
+begin
+  log = Logger.new(options[:logfile],3,100 * 1024 * 1024)
+  log.level = options[:loglevel]
+  log.datetime_format = '%Y-%m-%d %H:%M:%S'
+rescue SystemCallError => e
+  STDERR.puts e.message
+  STDERR.puts e.backtrace.inspect
+end
+
+ImageWatch.new(watch: options[:watchdir], destination: options[:destination], logger: log)
