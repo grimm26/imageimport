@@ -7,7 +7,7 @@ require 'date'
 
 
 module ImageImport
-  class ImageWatch
+  class Watch
     include EXIFR
 
     def initialize(watch: nil,destination: nil, logger: Logger.new(STDERR))
@@ -37,7 +37,7 @@ module ImageImport
           dest_file = File.join(dest_dir,dt.strftime("%Y_%m_%d-%H_%M_%S") + ".jpg")
 
           if File.exist?(dest_file)
-              @logger.info("Skipping duplicate #{destfile}")
+              @logger.info("Skipping duplicate #{dest_file}")
             begin
               File.delete(filepath)
             rescue Exception => e
@@ -56,7 +56,7 @@ module ImageImport
               File.chmod(0664,dest_file)
               File.chown(nil,444,dest_file)
             rescue SystemCallError => e
-              @logger.error("Error processing #{dest_file}: #{e.message}")
+              @logger.error("Error processing #{dest_file}: #{e.message} #{e.backtrace[0]}")
             end
           end
         end

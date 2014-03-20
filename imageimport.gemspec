@@ -22,7 +22,8 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake"
   spec.add_development_dependency "rspec"
   spec.add_dependency "rb-inotify"
-  spec.add_dependency "filemagic"
+  spec.add_dependency "ruby-filemagic"
   spec.add_dependency "exifr"
+  spec.add_dependency "daemons"
 
 end
