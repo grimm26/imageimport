@@ -6,7 +6,6 @@ require 'logger'
 require 'daemons'
 
 
-Daemons.run_proc(File.basename(__FILE__),{:dir_mode => :normal, dir: '/var/tmp' }) do
 
   loglevels = { 'DEBUG'   => Logger::DEBUG,
                 'INFO'    => Logger::INFO,
@@ -16,14 +15,8 @@ Daemons.run_proc(File.basename(__FILE__),{:dir_mode => :normal, dir: '/var/tmp' 
                 'UNKNOWN' => Logger::UNKNOWN
               }
 
-  # Get rid of args before '--' that are meant for Daemons
-  sep_idx = ARGV.find_index('--')
-  unless sep_idx.nil?
-    ARGV.slice!(0..sep_idx)
-  end
-
   options = {}
-  OptionParser.new do |opts|
+  optparse = OptionParser.new do |opts|
     opts.banner = "Usage: #{$0} [options]"
 
     opts.on("-w DIRECTORY","--watchdir", "What directory to watch for incoming jpegs.") do |dir|
@@ -51,8 +44,16 @@ Daemons.run_proc(File.basename(__FILE__),{:dir_mode => :normal, dir: '/var/tmp' 
     opts.on("--logfile FILE", "File or filehandle to log to.") do |file|
       options[:logfile] = file
     end
+  end
 
-  end.parse!
+  # Find index of first '--'
+  sep_idx = ARGV.find_index('--') || -1
+
+  # Only parse stuff after '--'
+  optparse.parse(ARGV[sep_idx + 1..-1] || [])
+  if options[:watchdir].nil? || options[:destination].nil?
+    optparse.abort "Both --watchdir and --destination must be supplied.\n\n#{optparse.help}"
+  end
 
   begin
     log = Logger.new(options[:logfile],3,100 * 1024 * 1024)
@@ -63,5 +64,6 @@ Daemons.run_proc(File.basename(__FILE__),{:dir_mode => :normal, dir: '/var/tmp' 
     STDERR.puts e.backtrace.inspect
   end
 
+Daemons.run_proc(File.basename(__FILE__),{dir_mode: :normal, dir: '/var/tmp', ARGV: ARGV[0..sep_idx] }) do
   ImageImport::Watch.new(watch: options[:watchdir], destination: options[:destination], logger: log)
 end
