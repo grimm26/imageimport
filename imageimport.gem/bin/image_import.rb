@@ -49,7 +49,9 @@ end
 
 begin
   optparse.parse!
-rescue Exception => e
+rescue SystemExit => e
+  abort
+rescue OptionParser::ParseError => e
   optparse.abort "#{e.message}\n\n#{optparse.help}"
 end
 if options.watchdir.nil? || options.destination.nil?
