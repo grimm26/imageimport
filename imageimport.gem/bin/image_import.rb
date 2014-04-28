@@ -20,6 +20,7 @@ loglevels = {
 options = OpenStruct.new(
   daemonize: false,
   stop_daemon: false,
+  flush: false,
   watchdir: nil,
   destination: nil,
   loglevel: loglevels['INFO'],
@@ -43,6 +44,10 @@ optparse = OptionParser.new do |opts|
     else
       opts.abort "Supplied destination, #{dir}, is not a valid directory."
     end
+  end
+
+  opts.on('--flush',"First flush the existing files in the watch directory.") do |tf|
+    options.flush = tf
   end
 
   opts.on("--loglevel LEVEL", loglevels,  "Logging level (DEBUG, INFO, WARN, ERROR, FATAL, UNKNOWN).") do |level|
@@ -86,6 +91,7 @@ if options.daemonize && options.logfile == STDERR
   options.logfile = "/var/tmp/#{File.basename(__FILE__)}.log"
 end
 
+# Open up log
 begin
   log = Logger.new(options.logfile,3,100 * 1024 * 1024)
   log.level = options.loglevel
@@ -95,6 +101,7 @@ rescue SystemCallError => e
   STDERR.puts e.backtrace.inspect
 end
 
+# Set up ARGV to be fed to run_proc based on whether we want to run in the background or not
 d_hash = { dir_mode: :normal, dir: '/var/tmp', ontop: !options.daemonize }
 if options.daemonize
   d_hash[:ARGV] = ['start']
@@ -102,6 +109,18 @@ else
   d_hash[:ARGV] = ['run']
 end
 
-Daemons.run_proc(File.basename(__FILE__), d_hash) do
-  ImageImport::Watch.new(watch: options.watchdir, destination: options.destination, logger: log)
+begin
+  if options.flush
+    log.info("Flushing #{options.watchdir}...")
+    Dir.entries(options.watchdir).select {|f| f =~ /\.jpg|\.jpeg\Z/i}.each do |jpg|
+      ImageImport::JpegByDate.importFile(filepath: File.join(options.watchdir,jpg), destination: options.destination, logger: log)
+    end
+  end
+  Daemons.run_proc(File.basename(__FILE__), d_hash) do
+    ImageImport::Watch.new(watch: options.watchdir, destination: options.destination, logger: log)
+  end
+rescue SystemCallError => e
+  STDERR.puts e.message
+  STDERR.puts e.backtrace.inspect
+  exit 1
 end

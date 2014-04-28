@@ -23,7 +23,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10"
   spec.add_development_dependency "rspec", "~>2.14"
   spec.add_development_dependency "pry", "~> 0"
-  spec.add_development_dependency "pry-nav", "~> 0"
+  spec.add_development_dependency "pry-debugger", "~> 0"
   spec.add_dependency "rb-inotify", "~> 0.9"
   spec.add_dependency "ruby-filemagic", "~> 0.5"
   spec.add_dependency "exifr", "~> 1"
