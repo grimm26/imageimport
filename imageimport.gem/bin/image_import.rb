@@ -22,7 +22,7 @@ options = OpenStruct.new(
   stop_daemon: false,
   watchdir: nil,
   destination: nil,
-  loglevel: loglevels[:INFO],
+  loglevel: loglevels['INFO'],
   logfile: STDERR
   )
 
