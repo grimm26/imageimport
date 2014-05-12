@@ -33,7 +33,7 @@ module ImageImport
             if File.exist?(dest_file)
               logger.info("Skipping duplicate #{dest_file}")
               File.delete(filepath)
-              logger.warn("Failed removal of #{filepath}: #{e.message}")
+              logger.warn("Failed removal of #{filepath}")
             else
               logger.info("Moving #{filepath} to #{dest_file}")
               unless Dir.exist?(dest_dir)

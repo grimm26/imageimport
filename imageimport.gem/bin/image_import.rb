@@ -65,6 +65,10 @@ optparse = OptionParser.new do |opts|
   opts.on('--stop-daemon',"Stop a running daemon") do |tf|
     options.stop_daemon = tf
   end
+  opts.on('--version',"What version is this?") do
+    puts "ImageImport v#{ImageImport::VERSION}"
+    exit
+  end
 end
 
 begin
