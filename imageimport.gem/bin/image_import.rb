@@ -23,6 +23,7 @@ options = OpenStruct.new(
   flush: false,
   watchdir: nil,
   destination: nil,
+  delay: 0,
   loglevel: loglevels['INFO'],
   logfile: STDERR
   )
@@ -44,6 +45,10 @@ optparse = OptionParser.new do |opts|
     else
       opts.abort "Supplied destination, #{dir}, is not a valid directory."
     end
+  end
+
+  opts.on("--delay SECONDS", "Number of seconds to delay after a file is noticed.") do |seconds|
+    options.delay = seconds.to_i
   end
 
   opts.on('--flush',"First flush the existing files in the watch directory.") do |tf|
@@ -121,7 +126,7 @@ begin
     end
   end
   Daemons.run_proc(File.basename(__FILE__), d_hash) do
-    ImageImport::Watch.new(watch: options.watchdir, destination: options.destination, logger: log)
+    ImageImport::Watch.new(watch: options.watchdir, destination: options.destination, logger: log, delay: options.delay)
   end
 rescue SystemCallError => e
   STDERR.puts e.message
