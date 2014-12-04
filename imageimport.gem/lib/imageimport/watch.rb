@@ -5,7 +5,7 @@ require 'logger'
 module ImageImport
   class Watch
 
-    def initialize(watch: nil,destination: nil, logger: Logger.new(STDERR), delay: 0)
+    def initialize(watch: nil, destination: nil, logger: Logger.new(STDERR), delay: 0)
       raise SystemCallError,"Error accessing watchdir <<#{watch}>>" unless File.directory?(watch)
       raise SystemCallError,"Error accessing destination <<#{destination}>>" unless File.directory?(destination)
       File.umask(0002)

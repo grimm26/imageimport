@@ -8,7 +8,7 @@ module ImageImport
   class JpegByDate
     include EXIFR
 
-    def self.importFile(filepath: filepath,destination: destination, logger: logger)
+    def self.importFile(filepath: filepath, destination: destination, logger: logger)
       begin
         if FileMagic.open(:mime_type) { |fm| fm.file(filepath) } == 'image/jpeg'
           logger.info("Found new jpeg: #{filepath}")
