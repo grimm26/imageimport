@@ -17,12 +17,12 @@ Lint/UselessAssignment:
 # Offense count: 2
 # switch to 15
 Metrics/AbcSize:
-  Max: 42
+  Max: 30
 
 # Offense count: 1
 # switch to 2
 Metrics/BlockNesting:
-  Max: 4
+  Max: 3
 
 # Offense count: 1
 # switch to 6
