@@ -11,13 +11,13 @@ module ImageImport
     include EXIFR
 
     def initialize(
-                    source: nil,
+                    source:      nil,
                     destination: nil,
-                    logger: logger,
-                    group: Process.egid
+                    logger:      Logger.new(STDERR),
+                    group:       Process.egid
                   )
       @logger      = logger
-      @group       = Etc.getgrnam(group).gid
+      @group       = (group.is_a?(Integer) && group) || Etc.getgrnam(group).gid
 
       @logger.debug("Starting process for #{source}. Group: #{group}.")
       process_file(source: source, destination: destination)
