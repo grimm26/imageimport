@@ -24,6 +24,7 @@ options = OpenStruct.new(
   flush:       false,
   watchdir:    nil,
   destination: nil,
+  group:       Process.egid,
   delay:       0,
   loglevel:    loglevels['INFO'],
   logfile:     STDERR
@@ -62,10 +63,6 @@ optparse = OptionParser.new do |opts|
 
   opts.on('--logfile FILE', 'File or filehandle to log to.') do |file|
     options.logfile = file
-  end
-
-  opts.on('--user USER', 'User to own files.') do |user|
-    options.user = user
   end
 
   opts.on('--group GROUP', 'Group to own files.') do |group|
@@ -115,6 +112,7 @@ begin
   log = Logger.new(options.logfile, 3, 100 * 1024 * 1024)
   log.level = options.loglevel
   log.datetime_format = '%Y-%m-%d %H:%M:%S'
+  log.info('Process start.')
 rescue SystemCallError => e
   STDERR.puts e.message
   STDERR.puts e.backtrace.inspect
@@ -132,11 +130,22 @@ begin
   if options.flush
     log.info("Flushing #{options.watchdir}...")
     Dir.entries(options.watchdir).select { |f| f =~ /\.jpg|\.jpeg\Z/i }.each do |jpg|
-      ImageImport::JpegByDate.import_file(filepath: File.join(options.watchdir, jpg), destination: options.destination, logger: log)
+      ImageImport::JpegByDate.new(
+        source:      File.join(options.watchdir, jpg),
+        destination: options.destination,
+        logger:      log,
+        group:       options.group
+      )
     end
   end
   Daemons.run_proc(File.basename(__FILE__), d_hash) do
-    ImageImport::Watch.new(watch: options.watchdir, destination: options.destination, logger: log, delay: options.delay)
+    ImageImport::Watch.new(
+      watch:       options.watchdir,
+      destination: options.destination,
+      logger:      log,
+      delay:       options.delay,
+      group:       options.group
+    )
   end
 rescue SystemCallError => e
   STDERR.puts e.message

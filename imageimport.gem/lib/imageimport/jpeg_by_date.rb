@@ -1,54 +1,79 @@
 require 'logger'
 require 'filemagic'
+require 'fileutils'
 require 'exifr/jpeg'
 require 'date'
+require 'etc'
 
 module ImageImport
   # Methods to sort jpegs by date.
   class JpegByDate
     include EXIFR
 
-    def self.import_file(filepath: filepath, destination: destination, logger: logger)
-      if FileMagic.open(:mime_type) { |fm| fm.file(filepath) } == 'image/jpeg'
-        logger.info("Found new jpeg: #{filepath}")
-        dt = JPEG.new(filepath).date_time
+    def initialize(
+                    source: nil,
+                    destination: nil,
+                    logger: logger,
+                    group: Process.egid
+                  )
+      @logger      = logger
+      @group       = Etc.getgrnam(group).gid
+
+      @logger.debug("Starting process for #{source}. Group: #{group}.")
+      process_file(source: source, destination: destination)
+    end
+
+    def process_file(source: nil, destination: nil)
+      if FileMagic.open(:mime_type) { |fm| fm.file(source) } == 'image/jpeg'
+        @logger.info("Found new jpeg: #{source}")
+        dt = JPEG.new(source).date_time
         if dt.nil?
-          logger.info("No date info in #{filepath}. Dumping into unsorted.")
+          @logger.info("No date info in #{source}. Dumping into unsorted.")
           unsorted = File.join(destination, 'unsorted')
-          unless Dir.exist?(unsorted)
-            logger.debug("Creating new destination directory #{unsorted}")
-            Dir.mkdir(unsorted)
-            File.chown(nil, 444, unsorted)
-            File.chmod(02775, unsorted)
-          end
-          dest_file = File.join(unsorted, File.basename(filepath))
-          File.rename(filepath, dest_file)
-          File.chmod(0664, dest_file)
-          File.chown(nil, 444, dest_file)
+          ensure_dir unsorted
+          dest_file = File.join(unsorted, File.basename(source))
+          import_file(source: source, dest: dest_file)
         else
+          @logger.debug("Date info found in #{source}.")
           dest_dir  = File.join(destination, dt.strftime('%Y_%m_%d'))
           dest_file = File.join(dest_dir, dt.strftime('%Y_%m_%d-%H_%M_%S') + '.jpg')
 
           if File.exist?(dest_file)
-            logger.info("Skipping duplicate #{dest_file}")
-            File.delete(filepath)
-            logger.warn("Failed removal of #{filepath}")
+            @logger.info("Skipping duplicate #{dest_file}")
+            File.delete(source)
           else
-            logger.info("Moving #{filepath} to #{dest_file}")
-            unless Dir.exist?(dest_dir)
-              logger.debug("Creating new destination directory #{dest_dir}")
-              Dir.mkdir(dest_dir)
-              File.chown(nil, 444, dest_dir)
-              File.chmod(02775, dest_dir)
-            end
-            File.rename(filepath, dest_file)
-            File.chmod(0664, dest_file)
-            File.chown(nil, 444, dest_file)
+            ensure_dir dest_dir
+            import_file(source: source, dest: dest_file)
           end
         end
       end
-      rescue SystemCallError => e
-        logger.error("Error processing #{dest_file}: #{e.message} #{e.backtrace[0]}")
+      rescue => e
+        @logger.error("Error processing #{dest_file}: #{e.class.name} '#{e.message}' #{e.backtrace[0]}")
+        raise
+    end
+
+    private
+
+    def ensure_dir(dirname)
+      return if Dir.exist?(dirname)
+      @logger.debug("Creating new directory #{dirname}")
+      Dir.mkdir(dirname)
+      File.chown(nil, @group, dirname)
+      File.chmod(02775, dirname)
+    end
+
+    def import_file(source: nil, dest: nil, mode: 0664)
+      @logger.info("Copying #{source} to #{dest}")
+      FileUtils.cp(source, dest)
+      File.chmod(mode, dest)
+      @logger.debug("Chmod done on  #{dest}.")
+      num_chowned = File.chown(nil, @group, dest)
+      @logger.debug("Chowned #{num_chowned} files.")
+      if FileUtils.compare_file(source, dest)
+        File.delete(source)
+      else
+        fail "#{source} and #{dest} not identical."
+      end
     end
   end
 end
