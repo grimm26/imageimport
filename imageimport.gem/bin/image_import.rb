@@ -129,7 +129,7 @@ end
 begin
   if options.flush
     log.info("Flushing #{options.watchdir}...")
-    Dir.entries(options.watchdir).select { |f| f =~ /\.jpg|\.jpeg\Z/i }.each do |jpg|
+    Dir.entries(options.watchdir).select { |f| f =~ /^\w\.jpg|^\w\.jpeg$/i }.each do |jpg|
       ImageImport::JpegByDate.new(
         source:      File.join(options.watchdir, jpg),
         destination: options.destination,
